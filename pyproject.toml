@@ -1,0 +1,73 @@
+[project]
+name = "aetna-coding-challenge"
+version = "0.1.0"
+description = "Movie recommendation system with LLM-based enrichment and intelligent recommendations"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=2.12.4",
+    "implicit>=0.7.2",
+    "mcp>=1.17.0",
+    "numpy>=2.3.3",
+    "openai>=2.3.0",
+    "pandas>=2.3.3",
+    "pydantic-ai>=1.0.18",
+    "python-dotenv>=1.1.1",
+    "scikit-learn>=1.5.0",
+    "scipy>=1.14.0",
+    "sentence-transformers>=5.1.1",
+    "sqlite-vec>=0.1.6",
+    "sqlmodel>=0.0.27",
+    "typer>=0.19.2",
+]
+
+[project.scripts]
+movies = "src.cli:app"
+
+[tool.uv]
+package = true
+
+[project.optional-dependencies]
+# Advanced features: Pydantic-AI agents for Task 2
+advanced = [
+    "pydantic-ai>=1.0.18",
+]
+
+# Testing dependencies
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-mock>=3.12.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = [
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=json",
+    "-v",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

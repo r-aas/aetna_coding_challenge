@@ -1,0 +1,190 @@
+# Movie Recommendation System - Docker Compose
+# Development and production container orchestration
+
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
+    container_name: movie-recommender
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for development
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./main.py:/app/main.py:ro
+      # Mount data directories
+      - ./db:/app/db
+      - ./models:/app/models
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      # Mount config files
+      - ./.env:/app/.env:ro
+    working_dir: /app
+    command: ["python", "main.py", "test-db"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "main.py", "test-db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Interactive chat agent service
+  chat:
+    build:
+      context: .
+      target: chat-agent
+      dockerfile: Dockerfile
+    container_name: movie-chat
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db:ro
+      - ./models:/app/models:ro
+      - ./.env:/app/.env:ro
+    stdin_open: true
+    tty: true
+    profiles:
+      - chat
+    restart: "no"
+
+  # MCP Server service
+  mcp-server:
+    build:
+      context: .
+      target: mcp-server
+      dockerfile: Dockerfile
+    container_name: movie-mcp-server
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db:ro
+      - ./models:/app/models:ro
+      - ./.env:/app/.env:ro
+    stdin_open: true
+    tty: true
+    profiles:
+      - mcp
+    restart: unless-stopped
+
+  # Testing service
+  test:
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
+    container_name: movie-test
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./main.py:/app/main.py:ro
+      - ./db:/app/db:ro
+      - ./models:/app/models:ro
+      - ./.env:/app/.env:ro
+      - ./htmlcov:/app/htmlcov
+    working_dir: /app
+    command: ["python", "-m", "pytest", "tests/", "-v", "--cov=src", "--cov-report=html"]
+    profiles:
+      - test
+    restart: "no"
+
+  # Training service for ML models
+  training:
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
+    container_name: movie-training
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db:ro
+      - ./models:/app/models
+      - ./.env:/app/.env:ro
+    working_dir: /app
+    command: ["python", "main.py", "train"]
+    profiles:
+      - training
+    restart: "no"
+
+  # Database maintenance service
+  db-maintenance:
+    build:
+      context: .
+      target: production
+      dockerfile: Dockerfile
+    container_name: movie-db-maintenance
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./db:/app/db
+      - ./backups:/app/backups
+    working_dir: /app
+    command: ["python", "main.py", "test-db"]
+    profiles:
+      - maintenance
+    restart: "no"
+
+  # Future API server (placeholder)
+  api:
+    build:
+      context: .
+      target: api-server
+      dockerfile: Dockerfile
+    container_name: movie-api
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db:ro
+      - ./models:/app/models:ro
+      - ./.env:/app/.env:ro
+    ports:
+      - "8000:8000"
+    profiles:
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  db_data:
+    driver: local
+  models_data:
+    driver: local
+  backups_data:
+    driver: local
+
+networks:
+  default:
+    name: movie-recommender-network
+    driver: bridge
