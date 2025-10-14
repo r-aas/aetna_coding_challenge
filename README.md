@@ -55,6 +55,187 @@ make health-check      # System health check
 
 ---
 
+## 🤖 MCP (Model Context Protocol) Integration
+
+**Connect this movie system directly to Claude Desktop and Claude Code as an AI-powered tool!**
+
+Our implementation includes a full MCP server that exposes all movie recommendation functionality as tools that Claude can use intelligently. This allows you to have natural conversations about movies while Claude has real-time access to the movie database, recommendations, and enrichment data.
+
+### 🚀 Quick MCP Setup
+
+#### For Claude Desktop
+
+1. **Install the system:**
+   ```bash
+   git clone https://github.com/r-aas/aetna_coding_challenge.git
+   cd aetna-coding-challenge
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   uv sync
+   export OPENAI_API_KEY="your-openai-api-key"
+   ```
+
+2. **Configure Claude Desktop** (add to `claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "movie-recommender": {
+         "command": "/usr/local/bin/uv",
+         "args": [
+           "--directory",
+           "/path/to/aetna-coding-challenge",
+           "run",
+           "python",
+           "-m",
+           "src.mcp_server"
+         ],
+         "env": {
+           "OPENAI_API_KEY": "your-openai-api-key"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Config file locations:**
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+4. **Restart Claude Desktop** and enjoy movie conversations with real data!
+
+#### For Claude Code CLI
+
+1. **Add the MCP server:**
+   ```bash
+   claude mcp add --transport stdio movie-recommender -- uv --directory /path/to/aetna-coding-challenge run python -m src.mcp_server
+   ```
+
+2. **Verify connection:**
+   ```bash
+   claude mcp list
+   # Should show: movie-recommender: ✓ Connected
+   ```
+
+3. **Use in Claude Code sessions** - Claude can now access movie tools automatically!
+
+### 🛠️ Available MCP Tools
+
+Once configured, Claude gains access to these 11 movie tools:
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `search_movies` | Find movies by title | "Find movies with 'matrix' in the title" |
+| `get_movie_details` | Detailed movie info + enrichments | "Tell me about movie ID 603" |
+| `get_user_ratings` | User rating history | "Show me user 5's movie preferences" |
+| `get_random_movies` | Random movie samples | "Give me 5 random movies to explore" |
+| `get_movie_recommendations` | ML-based fast recommendations | "Recommend movies for user 5" |
+| `get_movie_recommendations` | LLM-based smart recommendations | "Find action movies with high revenue for user 5" |
+| `semantic_search_movies` | Natural language search | "Find uplifting family movies" |
+| `compare_movies` | Side-by-side analysis | "Compare The Matrix vs The Matrix Reloaded" |
+| `predict_rating` | Rating prediction | "What would user 5 rate Inception?" |
+| `get_movies_by_criteria` | Filtered search | "High-budget sci-fi movies from the 90s" |
+| `get_similar_movies` | Content-based similarity | "Movies similar to The Matrix" |
+
+### 💬 Example Conversations
+
+**In Claude Desktop or Claude Code with MCP enabled:**
+
+```
+You: "I'm looking for some good action movies. Can you help?"
+
+Claude: I'll search for action movies and give you some great recommendations! 
+Let me look through the database...
+
+[Claude automatically uses search_movies and get_movie_details tools]
+
+Based on the movie database, here are some excellent action movies:
+
+1. **The Matrix (1999)** 
+   - Budget: $63M, Revenue: $463M (highly effective!)
+   - Sentiment: Positive
+   - Perfect blend of action and sci-fi with groundbreaking visual effects
+
+2. **Terminator 2: Judgment Day (1991)**
+   - High-budget blockbuster with incredible practical effects
+   - Target audience: Broad appeal
+
+Would you like me to get personalized recommendations based on a specific user's preferences?
+```
+
+```
+You: "Can you recommend movies for user 5 that are similar to their past ratings?"
+
+Claude: [Uses get_user_ratings and get_movie_recommendations tools]
+
+Looking at user 5's rating history, I can see they enjoy:
+- Action/Drama combinations (rated Run Lola Run 4.0/5)
+- Character-driven stories (rated Shadows in Paradise 4.0/5)
+- Average rating: 3.91/5 across 100 movies
+
+Here are my LLM-powered recommendations tailored to their preferences:
+[Lists personalized recommendations with reasoning]
+```
+
+### 🧪 Testing MCP Integration
+
+**Automated validation (recommended):**
+```bash
+# Run complete setup validation
+uv run python scripts/validate_mcp_setup.py
+
+# This checks:
+# ✅ Python version (3.11+)
+# ✅ uv installation 
+# ✅ Project dependencies
+# ✅ MCP server import/startup
+# ✅ Tool functionality
+# ✅ Generates config examples
+```
+
+**Manual testing:**
+```bash
+# Install MCP testing client
+uv tool install mcp-client-for-testing
+
+# Test movie search
+mcp-client-for-testing \
+  --config '[{"name": "movie-recommender", "command": "uv", "args": ["--directory", ".", "run", "python", "-m", "src.mcp_server"]}]' \
+  --tool_call '{"name": "search_movies", "arguments": {"query": "matrix", "limit": 3}}'
+
+# Test movie details  
+mcp-client-for-testing \
+  --config '[{"name": "movie-recommender", "command": "uv", "args": ["--directory", ".", "run", "python", "-m", "src.mcp_server"]}]' \
+  --tool_call '{"name": "get_movie_details", "arguments": {"movie_id": 603}}'
+```
+
+### 🔧 Troubleshooting MCP Setup
+
+**Common issues:**
+
+1. **"Server not connecting"**
+   - Verify uv is installed: `which uv`
+   - Check path in config is absolute: `/full/path/to/aetna-coding-challenge`
+   - Ensure dependencies installed: `uv sync`
+
+2. **"API key errors"**
+   - Set OPENAI_API_KEY in environment or MCP config
+   - Use fast ML mode: `"use_llm": false` in tool calls
+
+3. **"Tools not appearing"**
+   - Restart Claude Desktop completely
+   - Check config file syntax with JSON validator
+   - Run `claude mcp list` to verify connection
+
+**Debug mode:**
+```bash
+# Run MCP server directly to see logs
+uv run python -m src.mcp_server
+
+# Test specific functions
+uv run pytest tests/test_mcp_server.py -v
+```
+
+---
+
 ## 🎯 Key Features
 
 ✅ **LLM-Powered Enrichment** - 5 custom attributes (sentiment, budget/revenue tiers, effectiveness, audience)  
