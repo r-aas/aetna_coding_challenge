@@ -22,9 +22,18 @@ install-dev: install ## Install with development dependencies
 	@echo "✅ Development environment ready!"
 
 # Testing
-test: ## Run all tests
-	@echo "🧪 Running test suite..."
-	uv run pytest tests/ -v
+test: ## Run all tests with current provider
+	@echo "🧪 Running test suite with current provider..."
+	@if [ -f .env ] && grep -q "ollama" .env; then \
+		echo "🏠 Using Ollama provider for tests"; \
+		OPENAI_API_KEY="ollama" OPENAI_BASE_URL="http://localhost:11434/v1" uv run pytest tests/ -v; \
+	elif [ -f .env ] && grep -q "openai" .env; then \
+		echo "🤖 Using OpenAI provider for tests"; \
+		set -a && source .env && set +a && uv run pytest tests/ -v; \
+	else \
+		echo "⚠️  No provider configured - running basic tests only"; \
+		uv run pytest tests/ -v; \
+	fi
 
 test-api: ## Run tests with API key (requires OPENAI_API_KEY)
 	@echo "🧪 Running tests with API integration..."
@@ -33,6 +42,20 @@ test-api: ## Run tests with API key (requires OPENAI_API_KEY)
 		set -a && source .env && set +a; \
 	fi
 	OPENAI_API_KEY=$$OPENAI_API_KEY uv run pytest tests/ -v
+
+test-ollama: ## Run all tests with Ollama (local LLM)
+	@echo "🏠 Running tests with Ollama provider..."
+	@echo "💡 Make sure Ollama is running: ollama serve"
+	OPENAI_API_KEY="ollama" OPENAI_BASE_URL="http://localhost:11434/v1" uv run pytest tests/ -v
+
+test-openai: ## Run tests with OpenAI (requires API key)
+	@echo "🤖 Running tests with OpenAI provider..."
+	@if [ -f .env.openai ]; then \
+		set -a && source .env.openai && set +a && uv run pytest tests/ -v; \
+	else \
+		echo "❌ .env.openai not found - run 'make use-openai' first"; \
+		exit 1; \
+	fi
 
 test-coverage: ## Run tests with coverage report
 	@echo "📊 Running tests with coverage..."
