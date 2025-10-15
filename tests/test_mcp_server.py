@@ -23,9 +23,10 @@ class TestMCPTools:
             assert 'movieId' in movie
             assert 'title' in movie
     
-    def test_get_movie_details(self):
+    @pytest.mark.asyncio
+    async def test_get_movie_details(self):
         """Test get movie details tool."""
-        details_json = get_movie_details(movie_id=862)  # Toy Story
+        details_json = await get_movie_details(movie_id=862)  # Toy Story
         details = json.loads(details_json)
         
         assert isinstance(details, dict)
@@ -54,12 +55,13 @@ class TestMCPTools:
         assert isinstance(results, list)
         assert len(results) <= 5
     
-    def test_movie_details_includes_enrichment(self):
+    @pytest.mark.asyncio
+    async def test_movie_details_includes_enrichment(self):
         """Test that movie details include enrichment when available."""
         enrichments = MovieEnrichment.get_all()
         if enrichments:
             movie_id = enrichments[0].movieId
-            details_json = get_movie_details(movie_id=movie_id)
+            details_json = await get_movie_details(movie_id=movie_id)
             details = json.loads(details_json)
             
             if 'enrichment' in details:
@@ -98,7 +100,8 @@ class TestChatAgent:
 class TestMCPIntegration:
     """Test MCP tool integration."""
     
-    def test_all_tools_return_valid_json(self):
+    @pytest.mark.asyncio
+    async def test_all_tools_return_valid_json(self):
         """Test that all tools return valid JSON."""
         # Test search
         search_json = search_movies(query="matrix", limit=3)
@@ -108,7 +111,7 @@ class TestMCPIntegration:
         # Test details
         if search_results:
             movie_id = search_results[0]['movieId']
-            details_json = get_movie_details(movie_id=movie_id)
+            details_json = await get_movie_details(movie_id=movie_id)
             details = json.loads(details_json)
             assert isinstance(details, dict)
         
