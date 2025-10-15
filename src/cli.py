@@ -86,13 +86,43 @@ def sample(
 
 
 @app.command()
-def movie(movie_id: int = typer.Argument(..., help="Movie ID to look up")):
+def movie(
+    movie_id: int = typer.Argument(..., help="Movie ID to look up"),
+    auto_enrich: bool = typer.Option(False, "--auto-enrich", help="Automatically enrich if needed")
+):
     """Get details for a specific movie."""
+    import asyncio
+    
     m = Movie.get_by_id(movie_id)
     
     if not m:
         typer.echo(f"❌ Movie {movie_id} not found", err=True)
         raise typer.Exit(1)
+    
+    async def get_enrichment():
+        from src.db import MovieEnrichment
+        if auto_enrich:
+            from src.enricher_db import enrich_movie_if_needed
+            try:
+                # Try to use current provider model, fallback to OpenAI
+                try:
+                    import os
+                    provider = os.getenv('LLM_PROVIDER', 'openai')
+                    if provider == 'ollama':
+                        model_name = "ollama:qwen3:32b"
+                    else:
+                        model_name = "openai:gpt-4o-mini"
+                except:
+                    model_name = "openai:gpt-4o-mini"
+                return await enrich_movie_if_needed(movie_id, model_name, verbose=True)
+            except Exception as e:
+                typer.echo(f"⚠️  Auto-enrichment failed: {e}")
+                return MovieEnrichment.get_by_id(movie_id)
+        else:
+            return MovieEnrichment.get_by_id(movie_id)
+    
+    # Get enrichment data
+    enrichment = asyncio.run(get_enrichment())
     
     typer.echo("\n" + "=" * 80)
     typer.echo(f"🎬 {m.title}")
@@ -114,6 +144,21 @@ def movie(movie_id: int = typer.Argument(..., help="Movie ID to look up")):
     if ratings:
         avg = sum(r.rating for r in ratings) / len(ratings)
         typer.echo(f"\n⭐ Ratings: {len(ratings)} ratings (avg: {avg:.2f}/5.0)")
+    
+    # Show enrichment data if available
+    if enrichment:
+        typer.echo(f"\n🤖 LLM Enrichment:")
+        typer.echo(f"   Sentiment: {enrichment.sentiment}")
+        typer.echo(f"   Budget Tier: {enrichment.budget_tier}")
+        typer.echo(f"   Revenue Tier: {enrichment.revenue_tier}")
+        typer.echo(f"   Effectiveness Score: {enrichment.effectiveness_score}/10")
+        typer.echo(f"   Target Audience: {enrichment.target_audience}")
+        if enrichment.reasoning:
+            typer.echo(f"   Reasoning: {enrichment.reasoning[:100]}...")
+    elif auto_enrich:
+        typer.echo(f"\n⚠️  Enrichment not available")
+    else:
+        typer.echo(f"\n💡 Add --auto-enrich to get LLM-generated insights")
     
     typer.echo("=" * 80 + "\n")
 

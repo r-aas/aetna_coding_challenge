@@ -227,6 +227,110 @@ Analyze this movie and provide structured enrichment data.
         }
 
 
+async def enrich_movie_if_needed(
+    movie_id: int,
+    model_name: str = "openai:gpt-4o-mini",
+    verbose: bool = False
+) -> Optional[MovieEnrichment]:
+    """Enrich a movie if it doesn't already have enrichment data.
+    
+    This function provides seamless enrichment on-demand. If the movie
+    already has enrichment data, it returns the existing data. If not,
+    it automatically enriches the movie using the LLM.
+    
+    Args:
+        movie_id: Movie ID to enrich
+        model_name: LLM model to use for enrichment
+        verbose: Print progress information
+        
+    Returns:
+        MovieEnrichment record (existing or newly created)
+    """
+    # Check if enrichment already exists
+    existing = MovieEnrichment.get_by_id(movie_id)
+    if existing:
+        if verbose:
+            print(f"✅ Using existing enrichment for movie {movie_id}")
+        return existing
+    
+    # Check if movie exists
+    movie = Movie.get_by_id(movie_id)
+    if not movie:
+        if verbose:
+            print(f"❌ Movie {movie_id} not found")
+        return None
+    
+    if verbose:
+        print(f"🤖 Auto-enriching movie {movie_id}: {movie.title}")
+    
+    try:
+        # Create enricher and enrich the movie
+        enricher = DatabaseMovieEnricher(model_name=model_name)
+        result = await enricher.enrich_movie(movie_id, overwrite=False)
+        
+        if result and verbose:
+            print(f"✅ Successfully enriched movie {movie_id}")
+        
+        return result
+        
+    except Exception as e:
+        if verbose:
+            print(f"❌ Failed to enrich movie {movie_id}: {e}")
+        return None
+
+
+async def enrich_movies_if_needed(
+    movie_ids: list[int],
+    model_name: str = "openai:gpt-4o-mini", 
+    verbose: bool = False
+) -> dict[int, Optional[MovieEnrichment]]:
+    """Enrich multiple movies if they don't already have enrichment data.
+    
+    This function efficiently handles batch enrichment requests by only
+    enriching movies that don't already have enrichment data.
+    
+    Args:
+        movie_ids: List of movie IDs to enrich
+        model_name: LLM model to use for enrichment
+        verbose: Print progress information
+        
+    Returns:
+        Dictionary mapping movie IDs to their enrichment records
+    """
+    results = {}
+    
+    # Check which movies need enrichment
+    needs_enrichment = []
+    for movie_id in movie_ids:
+        existing = MovieEnrichment.get_by_id(movie_id)
+        if existing:
+            results[movie_id] = existing
+            if verbose:
+                print(f"✅ Movie {movie_id} already enriched")
+        else:
+            needs_enrichment.append(movie_id)
+    
+    # Enrich movies that need it
+    if needs_enrichment:
+        if verbose:
+            print(f"🤖 Auto-enriching {len(needs_enrichment)} movies...")
+        
+        enricher = DatabaseMovieEnricher(model_name=model_name)
+        
+        for movie_id in needs_enrichment:
+            try:
+                result = await enricher.enrich_movie(movie_id, overwrite=False)
+                results[movie_id] = result
+                if verbose and result:
+                    print(f"✅ Enriched movie {movie_id}")
+            except Exception as e:
+                if verbose:
+                    print(f"❌ Failed to enrich movie {movie_id}: {e}")
+                results[movie_id] = None
+    
+    return results
+
+
 if __name__ == "__main__":
     """Test the database enricher."""
     import asyncio

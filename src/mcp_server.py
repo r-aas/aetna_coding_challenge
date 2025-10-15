@@ -49,8 +49,10 @@ def search_movies(query: str, limit: int = 10) -> str:
 
 
 @mcp.tool()
-def get_movie_details(movie_id: int) -> str:
+async def get_movie_details(movie_id: int) -> str:
     """Get detailed information about a specific movie.
+    
+    Automatically enriches the movie with LLM-generated attributes if not already enriched.
     
     Args:
         movie_id: The movie ID to look up
@@ -59,13 +61,28 @@ def get_movie_details(movie_id: int) -> str:
         JSON string with movie details including enrichments
     """
     import json
+    from src.enricher_db import enrich_movie_if_needed
     
     movie = Movie.get_by_id(movie_id)
     if not movie:
         return json.dumps({"error": f"Movie {movie_id} not found"})
     
-    # Get enrichment data
-    enrichment = MovieEnrichment.get_by_id(movie_id)
+    # Get enrichment data (auto-enrich if needed)
+    try:
+        # Try to use current provider model, fallback to OpenAI
+        try:
+            import os
+            provider = os.getenv('LLM_PROVIDER', 'openai')
+            if provider == 'ollama':
+                model_name = "ollama:qwen3:32b"
+            else:
+                model_name = "openai:gpt-4o-mini"
+        except:
+            model_name = "openai:gpt-4o-mini"
+        enrichment = await enrich_movie_if_needed(movie_id, model_name, verbose=False)
+    except Exception as e:
+        # Fall back to existing enrichment if auto-enrichment fails
+        enrichment = MovieEnrichment.get_by_id(movie_id)
     
     # Get ratings
     ratings = movie.get_ratings()
@@ -239,8 +256,10 @@ async def get_movie_recommendations(
 
 
 @mcp.tool()
-def compare_movies(movie_ids: List[int]) -> str:
+async def compare_movies(movie_ids: List[int]) -> str:
     """Compare multiple movies across various dimensions.
+    
+    Automatically enriches movies with LLM-generated attributes if not already enriched.
     
     Args:
         movie_ids: List of movie IDs to compare
@@ -249,9 +268,27 @@ def compare_movies(movie_ids: List[int]) -> str:
         JSON string with comparison data
     """
     import json
+    from src.enricher_db import enrich_movies_if_needed
     
     if len(movie_ids) < 2:
         return json.dumps({"error": "Need at least 2 movies to compare"})
+    
+    # Auto-enrich all movies if needed
+    try:
+        # Try to use current provider model, fallback to OpenAI
+        try:
+            import os
+            provider = os.getenv('LLM_PROVIDER', 'openai')
+            if provider == 'ollama':
+                model_name = "ollama:qwen3:32b"
+            else:
+                model_name = "openai:gpt-4o-mini"
+        except:
+            model_name = "openai:gpt-4o-mini"
+        enrichments = await enrich_movies_if_needed(movie_ids, model_name, verbose=False)
+    except Exception as e:
+        # Fall back to existing enrichments if auto-enrichment fails
+        enrichments = {mid: MovieEnrichment.get_by_id(mid) for mid in movie_ids}
     
     movies_data = []
     for movie_id in movie_ids:
@@ -259,7 +296,7 @@ def compare_movies(movie_ids: List[int]) -> str:
         if not movie:
             continue
         
-        enrichment = MovieEnrichment.get_by_id(movie_id)
+        enrichment = enrichments.get(movie_id)
         ratings = movie.get_ratings()
         avg_rating = sum(r.rating for r in ratings) / len(ratings) if ratings else None
         
