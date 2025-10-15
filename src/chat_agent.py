@@ -76,7 +76,7 @@ If a user asks about recommendations, you can use the ML-based recommendation sy
             Agent's response
         """
         result = await self.agent.run(message)
-        return result.data
+        return result.output
 
 
 # Default system prompt
