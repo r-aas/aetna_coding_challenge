@@ -557,16 +557,9 @@ def fast_recommend(
         python main.py fast-recommend 5 --n 20
     """
     from pathlib import Path
-    from src.hybrid_recommender import HybridRecommender
-    
-    # Check if model exists
-    if not Path(model_path).exists():
-        typer.echo(f"❌ Model not found at {model_path}", err=True)
-        typer.echo("\n💡 Train a model first: python main.py train", err=True)
-        raise typer.Exit(1)
-    
-    typer.echo(f"\n⚡ Loading trained model...")
-    recommender = HybridRecommender.load(model_path)
+    typer.echo(f"\n⚡ Loading model...")
+    from src.hybrid_recommender import load_or_train
+    recommender = load_or_train(model_path, verbose=True)
     
     typer.echo(f"🎬 Generating recommendations for User {user_id}")
     typer.echo("=" * 80)
@@ -635,17 +628,13 @@ def eval_model(
         python main.py eval-model --k 20
     """
     from pathlib import Path
-    from src.hybrid_recommender import HybridRecommender
-    
-    if not Path(model_path).exists():
-        typer.echo(f"❌ Model not found at {model_path}", err=True)
-        raise typer.Exit(1)
     
     typer.echo(f"📊 Evaluating model...")
     typer.echo("=" * 80)
     
-    # Load model
-    recommender = HybridRecommender.load(model_path)
+    # Load model (or train if needed)
+    from src.hybrid_recommender import load_or_train
+    recommender = load_or_train(model_path, verbose=True)
     
     # Get test ratings (last 20% of each user's ratings)
     all_ratings = Rating.get_session().__enter__().exec(

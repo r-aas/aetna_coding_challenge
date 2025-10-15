@@ -198,14 +198,12 @@ async def get_movie_recommendations(
     # ML mode: Fast collaborative filtering
     else:
         model_path = "models/hybrid_recommender.pkl"
-        if not Path(model_path).exists():
-            return json.dumps({"error": "Model not trained. Run 'python main.py train' first."})
         
         try:
-            from src.hybrid_recommender import HybridRecommender
+            from src.hybrid_recommender import load_or_train
             
-            # Load model
-            recommender = HybridRecommender.load(model_path)
+            # Load existing model or automatically train new one
+            recommender = load_or_train(model_path, verbose=False)
             
             # Get recommendations
             recs = recommender.recommend(user_id, n=n)
@@ -224,7 +222,7 @@ async def get_movie_recommendations(
                 movie = movies_dict.get(int(movie_id))
                 if movie:
                     results.append({
-                        "movieId": movie_id,
+                        "movieId": int(movie_id),  # Convert numpy int64 to Python int
                         "title": movie.title,
                         "score": round(float(score), 4),
                         "genres": movie.genres

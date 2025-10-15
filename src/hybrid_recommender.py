@@ -476,6 +476,47 @@ def train_and_save(
     return recommender
 
 
+def load_or_train(
+    model_path: str = "models/hybrid_recommender.pkl",
+    factors: int = 64,
+    regularization: float = 0.01,
+    iterations: int = 20,
+    verbose: bool = True
+) -> HybridRecommender:
+    """Load existing model or automatically train a new one if it doesn't exist.
+    
+    This function provides seamless model loading with automatic training fallback.
+    If the model exists, it loads it. If not, it trains a new model automatically.
+    
+    Args:
+        model_path: Path to the model file
+        factors: Number of latent factors (used if training new model)
+        regularization: L2 regularization (used if training new model)  
+        iterations: Number of ALS iterations (used if training new model)
+        verbose: Print progress information
+        
+    Returns:
+        Loaded or newly trained HybridRecommender
+    """
+    if Path(model_path).exists():
+        if verbose:
+            print(f"✅ Loading existing model from {model_path}")
+        return HybridRecommender.load(model_path)
+    else:
+        if verbose:
+            print(f"🤖 Model not found at {model_path}")
+            print("🚀 Automatically training new model...")
+            print("   This may take a few minutes on first run...")
+        
+        return train_and_save(
+            factors=factors,
+            regularization=regularization, 
+            iterations=iterations,
+            save_path=model_path,
+            verbose=verbose
+        )
+
+
 if __name__ == "__main__":
     # Quick test
     print("Training hybrid recommender...")
