@@ -78,8 +78,8 @@ class TestEnricherMocked:
         if not os.getenv('OPENAI_API_KEY'):
             pytest.skip("No OPENAI_API_KEY available")
         
-        enricher = DatabaseMovieEnricher(model_name="openai:gpt-4o-mini")
-        assert enricher.model_name == "openai:gpt-4o-mini"
+        enricher = DatabaseMovieEnricher(model_name="openai:qwen2.5:7b")
+        assert enricher.model_name == "openai:qwen2.5:7b"
     
     @patch('src.enricher_db.DatabaseMovieEnricher.enrich_movie')
     async def test_enricher_returns_valid_structure(self, mock_enrich):

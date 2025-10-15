@@ -16,8 +16,8 @@ class TestMovieRecommender:
         if not os.getenv('OPENAI_API_KEY'):
             pytest.skip("No OPENAI_API_KEY available")
         
-        recommender = MovieRecommender(model_name="openai:gpt-4o-mini")
-        assert recommender.model_name == "openai:gpt-4o-mini"
+        recommender = MovieRecommender(model_name="openai:qwen2.5:7b")
+        assert recommender.model_name == "openai:qwen2.5:7b"
     
     @pytest.mark.asyncio
     async def test_analyze_user_preferences(self):
@@ -27,7 +27,7 @@ class TestMovieRecommender:
         if not os.getenv('OPENAI_API_KEY'):
             pytest.skip("No OPENAI_API_KEY available")
         
-        recommender = MovieRecommender(model_name="openai:gpt-4o-mini")
+        recommender = MovieRecommender(model_name="openai:qwen2.5:7b")
         
         try:
             preferences = await recommender.analyze_user_preferences(user_id=5)
@@ -51,7 +51,7 @@ class TestMovieRecommender:
         if not os.getenv('OPENAI_API_KEY'):
             pytest.skip("No OPENAI_API_KEY available")
         
-        recommender = MovieRecommender(model_name="openai:gpt-4o-mini")
+        recommender = MovieRecommender(model_name="openai:qwen2.5:7b")
         
         try:
             result = await recommender.recommend(
@@ -81,7 +81,7 @@ class TestRecommendationHelpers:
             result = await get_recommendations(
                 user_id=5,
                 n=5,
-                model="openai:gpt-4o-mini"
+                model="openai:qwen2.5:7b"
             )
             
             assert result is not None

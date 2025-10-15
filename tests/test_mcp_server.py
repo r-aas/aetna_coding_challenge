@@ -79,9 +79,9 @@ class TestChatAgent:
         if not os.getenv('OPENAI_API_KEY'):
             pytest.skip("No OPENAI_API_KEY available")
         
-        agent = MovieChatAgent(model_name="openai:gpt-4o-mini")
+        agent = MovieChatAgent(model_name="openai:qwen2.5:7b")
         assert agent is not None
-        assert agent.model_name == "openai:gpt-4o-mini"
+        assert agent.model_name == "openai:qwen2.5:7b"
     
     def test_agent_custom_system_prompt(self):
         """Test agent with custom system prompt via CLI."""
@@ -91,7 +91,7 @@ class TestChatAgent:
         
         custom_prompt = "You are a helpful movie assistant."
         cli = MovieChatCLI(
-            model_name="openai:gpt-4o-mini",
+            model_name="openai:qwen2.5:7b",
             system_prompt=custom_prompt
         )
         assert cli.system_prompt == custom_prompt
