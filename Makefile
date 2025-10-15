@@ -1,7 +1,7 @@
 # Movie Recommendation System - Makefile
 # Production-grade development automation
 
-.PHONY: help install test test-watch test-coverage clean lint format check docker-build docker-run docker-compose-up docker-compose-down backup restore train eval demo
+.PHONY: help install test test-watch test-coverage clean lint format check docker-build docker-run docker-compose-up docker-compose-down backup restore train eval demo setup-env use-openai use-ollama provider-status test-provider
 
 # Default target
 help: ## Show this help message
@@ -117,6 +117,74 @@ mcp-server: ## Start MCP server for Claude Desktop
 	@echo "🔌 Starting MCP server..."
 	@echo "Configure Claude Desktop with this server"
 	uv run python main.py mcp-server
+
+# Provider Management
+setup-env: ## Set up environment files from examples if they don't exist
+	@echo "🔧 Setting up environment files..."
+	@if [ ! -f .env.openai ]; then \
+		cp example.openai.env .env.openai; \
+		echo "📋 Created .env.openai from example - please add your OpenAI API key"; \
+	else \
+		echo "✅ .env.openai already exists"; \
+	fi
+	@if [ ! -f .env.ollama ]; then \
+		cp example.ollama.env .env.ollama; \
+		echo "📋 Created .env.ollama from example"; \
+	else \
+		echo "✅ .env.ollama already exists"; \
+	fi
+	@echo "💡 Edit .env.openai to add your OpenAI API key, then run 'make use-openai'"
+
+use-openai: setup-env ## Switch to OpenAI provider
+	@echo "🤖 Switching to OpenAI provider..."
+	@if [ -f .env.openai ]; then \
+		cp .env.openai .env; \
+		echo "✅ Switched to OpenAI (gpt-4o-mini)"; \
+		if grep -q "your-openai-api-key-here" .env.openai; then \
+			echo "⚠️  Please edit .env.openai with your actual OpenAI API key"; \
+		else \
+			echo "📊 API Key configured"; \
+		fi; \
+	else \
+		echo "❌ .env.openai not found after setup"; \
+		exit 1; \
+	fi
+
+use-ollama: setup-env ## Switch to Ollama provider (Qwen3)
+	@echo "🏠 Switching to Ollama provider..."
+	@if [ -f .env.ollama ]; then \
+		cp .env.ollama .env; \
+		echo "✅ Switched to Ollama (qwen3:32b)"; \
+		echo "🔗 Base URL: http://localhost:11434"; \
+		echo "💡 Make sure Ollama is running: ollama serve"; \
+	else \
+		echo "❌ .env.ollama not found after setup"; \
+		exit 1; \
+	fi
+
+provider-status: ## Show current provider configuration
+	@echo "📋 Current Provider Configuration:"
+	@echo "=================================="
+	@if [ -f .env ]; then \
+		echo "🏷️  Provider: $$(grep LLM_PROVIDER .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+		echo "🤖 Model: $$(grep MODEL_NAME .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+		echo "🔗 Base URL: $$(grep '^BASE_URL=' .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+		echo "🔑 API Key: $$(grep '^API_KEY=' .env 2>/dev/null | cut -d'=' -f2 | head -c 20)..."; \
+		echo "📐 Model: $$(grep '^MODEL=' .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+		echo "🎛️  Max Tokens: $$(grep '^MAX_TOKENS=' .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+		echo "🌡️  Temperature: $$(grep '^TEMPERATURE=' .env 2>/dev/null | cut -d'=' -f2 || echo 'Not set')"; \
+	else \
+		echo "❌ No .env file found - run 'make use-openai' or 'make use-ollama'"; \
+	fi
+
+test-provider: provider-status ## Test current provider with sample request
+	@echo ""
+	@echo "🧪 Testing current provider..."
+	@if [ -f .env ]; then \
+		uv run python -c "from src.config import get_model_name; print('✅ Provider working correctly')"; \
+	else \
+		echo "❌ No provider configured"; \
+	fi
 
 # Code Quality
 lint: ## Run linting with ruff

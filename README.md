@@ -43,6 +43,8 @@
 
 ## ⚡ Quick Start
 
+### 🔧 Setup with Provider Management
+
 ```bash
 # Clone and install
 git clone https://github.com/r-aas/aetna_coding_challenge.git
@@ -50,13 +52,41 @@ cd aetna-coding-challenge
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 
-# Set API key
-export OPENAI_API_KEY="your-key-here"
+# Automatic environment setup
+make use-openai     # Sets up OpenAI (requires API key)
+# OR
+make use-ollama     # Sets up Ollama (local LLM)
+
+# Add your OpenAI API key (if using OpenAI)
+# Edit .env.openai and replace "your-openai-api-key-here" with your actual key
 
 # Verify installation
 uv run pytest tests/ -v
 uv run python main.py sample --n 5
 ```
+
+### 🔄 Provider Switching
+
+```bash
+# Check current provider
+make provider-status
+
+# Switch providers anytime
+make use-openai     # Switch to OpenAI GPT-4o-mini
+make use-ollama     # Switch to Ollama Qwen3:32b
+
+# Test current provider
+make test-provider
+```
+
+### 🛠️ Environment Files
+
+The system uses example environment files for secure credential management:
+
+- `example.openai.env` - OpenAI configuration template
+- `example.ollama.env` - Ollama configuration template  
+
+Running `make use-openai` or `make use-ollama` automatically copies these to working files (`env.openai`, `.env.ollama`) and activates them.
 
 ### 🐳 Docker & Make Commands
 
@@ -67,6 +97,13 @@ make install           # Install dependencies
 make test              # Run tests
 make docker-build      # Build Docker image
 make docker-run        # Run in container
+
+# Provider management
+make setup-env         # Set up environment files from examples
+make use-openai        # Switch to OpenAI provider
+make use-ollama        # Switch to Ollama provider
+make provider-status   # Show current provider configuration
+make test-provider     # Test current provider functionality
 
 # Docker commands
 docker build -t movie-recommender .
@@ -92,13 +129,18 @@ Our implementation includes a full MCP server that exposes all movie recommendat
 
 #### For Claude Desktop
 
-1. **Install the system:**
+1. **Install and configure the system:**
    ```bash
    git clone https://github.com/r-aas/aetna_coding_challenge.git
    cd aetna-coding-challenge
    curl -LsSf https://astral.sh/uv/install.sh | sh
    uv sync
-   export OPENAI_API_KEY="your-openai-api-key"
+   
+   # Set up provider (choose one)
+   make use-openai     # For OpenAI (requires API key)
+   make use-ollama     # For Ollama (local LLM)
+   
+   # Edit .env.openai with your actual API key if using OpenAI
    ```
 
 2. **Configure Claude Desktop** (add to `claude_desktop_config.json`):
@@ -116,12 +158,14 @@ Our implementation includes a full MCP server that exposes all movie recommendat
            "src.mcp_server"
          ],
          "env": {
-           "OPENAI_API_KEY": "your-openai-api-key"
+           "LLM_PROVIDER": "openai"
          }
        }
      }
    }
    ```
+
+   **Note:** The MCP server automatically loads the active `.env` file created by `make use-openai` or `make use-ollama`. No need to duplicate API keys in the MCP configuration.
 
 3. **Config file locations:**
    - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -1306,6 +1350,16 @@ make db-backup         # Backup databases with timestamp
 make db-restore        # Restore from latest backup
 ```
 
+### Provider Management Commands
+
+```bash
+make setup-env         # Set up environment files from examples
+make use-openai        # Switch to OpenAI provider (GPT-4o-mini)
+make use-ollama        # Switch to Ollama provider (Qwen3:32b)
+make provider-status   # Show current provider configuration
+make test-provider     # Test current provider with sample request
+```
+
 ### Docker Commands
 
 ```bash
@@ -1760,6 +1814,7 @@ uv run pytest tests/ --cov=src --cov-report=html
 git clone https://github.com/r-aas/aetna_coding_challenge.git
 cd aetna-coding-challenge
 make install
+make use-ollama         # Use local LLM (no API key needed)
 make test
 make demo
 
@@ -1769,10 +1824,20 @@ cd aetna-coding-challenge
 make docker-build
 make docker-run
 
-# Full exploration (10 minutes)
-export OPENAI_API_KEY="your-key"
+# Full exploration with OpenAI (10 minutes)
+make use-openai         # Set up OpenAI provider
+# Edit .env.openai with your API key
+make provider-status    # Verify configuration
 make train              # Train ML model
 make enrich             # LLM enrichment
+make chat               # Interactive chat
+make health-check       # System check
+
+# Full exploration with Ollama (10 minutes)
+make use-ollama         # Use local LLM
+ollama serve            # Start Ollama server
+make provider-status    # Verify configuration
+make train              # Train ML model  
 make chat               # Interactive chat
 make health-check       # System check
 ```
