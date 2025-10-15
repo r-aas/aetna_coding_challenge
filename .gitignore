@@ -28,6 +28,8 @@ env/
 
 # Environment variables
 .env
+.env.openai
+.env.ollama
 
 # IDE
 .vscode/
